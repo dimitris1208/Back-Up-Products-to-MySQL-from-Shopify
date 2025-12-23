@@ -2,6 +2,10 @@ import os
 from dotenv import load_dotenv
 import requests
 import time
+<<<<<<< HEAD
+=======
+import re
+>>>>>>> acc4085a3ebee2c7e6254976a4c6b00c2a6e041f
 
 load_dotenv()
 
@@ -70,4 +74,14 @@ def main():
     data = fetch_all_products()
     if not data:
         print("No products found or error fetching products.")
+<<<<<<< HEAD
         return
+=======
+        return
+
+
+        
+
+if __name__ == "__main__":
+    main()
+>>>>>>> acc4085a3ebee2c7e6254976a4c6b00c2a6e041f
