@@ -1,4 +1,7 @@
 import os
+import json
+import mysql.connector
+from sshtunnel import SSHTunnelForwarder
 from dotenv import load_dotenv
 import requests
 import time
@@ -65,15 +68,104 @@ def fetch_all_products():
 
 
 
+def transfrom_to_tuples(products):
+    rows = []
+    today = time.strftime('%Y-%m-%d')
+
+    for p in products:
+
+        variants = p.get("variants", [])
+        total_inv = sum(v.get("inventory_quantity", 0) for v in variants)
+        price = variants[0].get("price") if variants else 0
+        compare = variants[0].get("compare_at_price") if variants else None
+
+        image_urls = json.dumps([img.get("src") for img in p.get("images", [])])
+        tags = p.get("tags", "")
+        if isinstance(tags, list):
+            tags = ",".join(tags)
+
+        row = (
+            p['id'], #id
+            p.get('title'), #title
+            p.get('body_html'), #description
+            p.get('vendor'), #vendor
+            p.get('product_type'), #product_type
+            p.get('handle'), #handle
+            tags, #tags
+            image_urls, #images JSON String
+            price, #price
+            compare, #compare_at_price
+            total_inv, #total_inventory
+            p.get('created_at'), #created_at
+        )
+        rows.append(row)
+    
+    return rows
+
 
 def main():
     start_time = time.time()
 
+    # Fetch all products
     data = fetch_all_products()
     if not data:
         print("No products found or error fetching products.")
         return
+    
+    # Transform data as needed 
+    print("Transforming data to Tuples...")
+    rows_to_insert = transfrom_to_tuples(data)
 
+
+    # UPLOAD
+    print ("\n Opening Secure Tunnel...")
+    with SSHTunnelForwarder(
+        (PA_SSH_HOST, 22),
+        ssh_username=PA_SSH_USER,
+        ssh_password=PA_SSH_PASS,
+        remote_bind_address=(PA_DB_HOST, 3306)
+    ) as tunnel:    
+        
+        print("Connecting to Daabase...")
+
+        conn = mysql.connector.connect(
+            user=PA_SSH_USER,
+            password=PA_DB_PASS,
+            host='127.0.0.1',
+            port=tunnel.local_bind_port,
+            database=PA_DB_NAME
+        )
+        cursor = conn.cursor()
+
+        today = time.strftime('%Y-%m-%d')
+
+        #Delete todays data Idempotency
+        print("Deleting existing data for today...")
+        cursor.execute("DELETE FROM products WHERE snapshot_date = %s", (today,))
+
+        # Insert new data
+        print(f"Inserting {len(rows_to_insert)} new records...")
+
+        sql = """
+            INSERT INTO products (
+                id, snapshot_date, title, body_html, vendor, product_type, handle, tags,
+                images, price, compare_at_price, inventory_quantity, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        #Batch logic
+        batch_size = 500
+        for i in range(0, len(rows_to_insert), batch_size):
+            batch = rows_to_insert[i:i+batch_size]
+            cursor.executemany(sql, batch)
+            print(f"    Saved rows {i} to {i+len(batch)}")
+
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+    
+    print(f"\nSync completed in {time.time() - start_time:.2f} seconds.")
 
 
         
