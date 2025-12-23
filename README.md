@@ -15,7 +15,7 @@ This script enables seamless integration between your Shopify platform and a MyS
 - **Batch Processing**: Efficiently handles large product catalogs
 
 ## Limitations
-⚠️ **Note**: This script does **not** track inventory levels. Product inventory data is not synchronized or updated during the sync process.
+⚠️ **Note**: This script does **not** track variants levels. Product inventory data is not synchronized or updated during the sync process.
 
 ## Requirements
 - Shopify API credentials
@@ -23,4 +23,4 @@ This script enables seamless integration between your Shopify platform and a MyS
 - Python environment with required dependencies
 
 ## Usage
-Simply run the script to initiate the synchronization:
+Simply run the script to initiate the synchronization
