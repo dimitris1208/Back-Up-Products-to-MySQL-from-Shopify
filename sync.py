@@ -43,7 +43,7 @@ def fetch_all_products():
     products = []
     url = f"https://{SHOP_DOMAIN}/admin/api/{API_VERSION}/products.json?limit=250"
 
-    while url:
+    while url: 
         try:
             response = session.get(url)
             if response.status_code == 429:
@@ -68,38 +68,38 @@ def fetch_all_products():
 
 
 
-def transfrom_to_tuples(products):
+def transform_to_tuples(raw_products):
     rows = []
-    today = time.strftime('%Y-%m-%d')
-
-    for p in products:
-
-        variants = p.get("variants", [])
-        total_inv = sum(v.get("inventory_quantity", 0) for v in variants)
-        price = variants[0].get("price") if variants else 0
-        compare = variants[0].get("compare_at_price") if variants else None
-
-        image_urls = json.dumps([img.get("src") for img in p.get("images", [])])
-        tags = p.get("tags", "")
-        if isinstance(tags, list):
-            tags = ",".join(tags)
-
+    today = time.strftime("%Y-%m-%d")
+    
+    for p in raw_products:
+        variants = p.get('variants', [])
+        total_inv = sum(v.get('inventory_quantity', 0) for v in variants)
+        # Handle cases where product has no variants
+        price = variants[0].get('price') if variants else 0.00
+        compare = variants[0].get('compare_at_price') if variants else None
+        
+        image_urls = json.dumps([img['src'] for img in p.get('images', [])])
+        tags = p.get('tags', '')
+        if isinstance(tags, list): tags = ", ".join(tags)
+        
         row = (
-            p['id'], #id
-            p.get('title'), #title
-            p.get('body_html'), #description
-            p.get('vendor'), #vendor
-            p.get('product_type'), #product_type
-            p.get('handle'), #handle
-            tags, #tags
-            image_urls, #images JSON String
-            price, #price
-            compare, #compare_at_price
-            total_inv, #total_inventory
-            p.get('created_at'), #created_at
+            p['id'],               
+            today,                 
+            p.get('title'),        
+            p.get('body_html'),    
+            p.get('vendor'),       
+            p.get('product_type'),  
+            p.get('handle'),        
+            tags,                 
+            image_urls,          
+            price,                  
+            compare,            
+            total_inv,              
+            p.get('created_at')     
         )
         rows.append(row)
-    
+        
     return rows
 
 
@@ -114,7 +114,7 @@ def main():
     
     # Transform data as needed 
     print("Transforming data to Tuples...")
-    rows_to_insert = transfrom_to_tuples(data)
+    rows_to_insert = transform_to_tuples(data)
 
 
     # UPLOAD
